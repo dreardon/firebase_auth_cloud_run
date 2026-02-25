@@ -56,6 +56,34 @@ gcloud compute routers nats create nat-config \
   --nat-all-subnet-ip-ranges \
   --auto-allocate-nat-external-ips
 ```
+
+## Firebase Auth Setup
+
+### Firebase Console
+1. Create a Firebase Project in the [Firebase Console](https://console.firebase.google.com/).
+2. Enable the following Sign-in providers in the Authentication section:
+    *   **Google**
+    *   **Email/Password** (Enable the **Email link (passwordless sign-in)** option)
+    *   **Anonymous**
+3. Add your domain to the list of authorized domains in the Authentication section of the Firebase Console.
+4. Add a **Web App** to your Firebase project.
+5. Copy the Firebase configuration object variables into your .env file and/or Cloud Run environment variables.
+6. **Enable MFA**:
+    *   Go to **Authentication** > **Settings** > **SMS Multi-Factor Authentication**.
+    *   Enable the toggle for **SMS Multi-Factor Authentication**.
+    *   (Note: MFA requires upgrading to **Firebase Authentication with Identity Platform**).
+
+### Firebase & Cloud Run IAM Permissions
+```bash
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+    --role="roles/iam.serviceAccountTokenCreator"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+    --role="roles/firebaseauth.admin"
+```
+
 ## Cloud Run and Load Balancing
 
 ### Create Cloud Run Build with VPC Connector
@@ -93,7 +121,13 @@ gcloud run deploy $SERVICE_NAME \
     --vpc-connector=run-vpc-connector \
     --no-default-url \
     --no-invoker-iam-check \
-    --allow-unauthenticated
+    --allow-unauthenticated \
+    --set-env-vars=FIREBASE_API_KEY=,\
+    FIREBASE_AUTH_DOMAIN=,\
+    FIREBASE_PROJECT_ID=,\
+    FIREBASE_STORAGE_BUCKET=,\
+    FIREBASE_MESSAGING_SENDER_ID=,\
+    FIREBASE_APP_ID=
 ```
 
 ### Create Load Balancer and Serverless NEG Mapping
@@ -158,31 +192,4 @@ gcloud compute forwarding-rules create ${LB_NAME}-https-rule \
     --global \
     --target-https-proxy=${LB_NAME}-https-proxy \
     --ports=443
-```
-
-## Firebase Auth Setup
-
-### Firebase Console
-1. Create a Firebase Project in the [Firebase Console](https://console.firebase.google.com/).
-2. Enable the following Sign-in providers in the Authentication section:
-    *   **Google**
-    *   **Email/Password** (Enable the **Email link (passwordless sign-in)** option)
-    *   **Anonymous**
-3. Add your domain to the list of authorized domains in the Authentication section of the Firebase Console.
-4. Add a **Web App** to your Firebase project.
-5. Copy the Firebase configuration object and paste it into `public/firebase-config.js`.
-6. **Enable MFA**:
-    *   Go to **Authentication** > **Settings** > **SMS Multi-Factor Authentication**.
-    *   Enable the toggle for **SMS Multi-Factor Authentication**.
-    *   (Note: MFA requires upgrading to **Firebase Authentication with Identity Platform**).
-
-### Firebase & Cloud Run IAM Permissions
-```bash
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
-    --role="roles/iam.serviceAccountTokenCreator"
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
-    --role="roles/firebaseauth.admin"
 ```

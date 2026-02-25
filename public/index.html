@@ -38,7 +38,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-auth-compat.js"></script>
-    <script src="firebase-config.js"></script>
     <script src="auth.js"></script>
     <script>
         // Check if user is logged in via API
@@ -58,6 +57,7 @@
             document.getElementById('loading').classList.remove('hidden');
 
             try {
+                if (!auth) await initializeFirebaseAuth();
                 const result = await loginAnonymously();
                 const idToken = await result.user.getIdToken();
                 

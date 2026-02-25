@@ -80,7 +80,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-auth-compat.js"></script>
-    <script src="firebase-config.js"></script>
     <script src="auth.js"></script>
     <script>
         const googleBtn = document.getElementById('google-signin');
@@ -105,7 +104,7 @@
 
         // Check if returning from email link
         window.addEventListener('load', async () => {
-            if (auth.isSignInWithEmailLink(window.location.href)) {
+            if (auth && auth.isSignInWithEmailLink(window.location.href)) {
                 showLoading(true, 'Verifying link...');
                 try {
                     const result = await finishSignInWithEmailLink();
@@ -114,6 +113,22 @@
                     }
                 } catch (err) {
                     handleAuthError(err);
+                }
+            } else {
+                // Initialize auth for normal login flow
+                await initializeFirebaseAuth();
+                
+                // Now check again after init (just in case)
+                if (auth.isSignInWithEmailLink(window.location.href)) {
+                     showLoading(true, 'Verifying link...');
+                    try {
+                        const result = await finishSignInWithEmailLink();
+                        if (result) {
+                            await handleSessionLogin(result.user);
+                        }
+                    } catch (err) {
+                        handleAuthError(err);
+                    }
                 }
             }
         });
@@ -166,6 +181,7 @@
         }
 
         googleBtn.addEventListener('click', async () => {
+            if (!auth) await initializeFirebaseAuth();
             showLoading(true, 'Connecting to Google...');
             try {
                 const result = await loginWithGoogle();
@@ -177,6 +193,7 @@
 
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!auth) await initializeFirebaseAuth();
             showLoading(true, 'Sending link...');
             try {
                 await sendSignInLink(emailInput.value);

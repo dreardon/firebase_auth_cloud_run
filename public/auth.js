@@ -1,6 +1,19 @@
-firebase.initializeApp(firebaseConfig);
+// Initialize Firebase
+let auth;
 
-const auth = firebase.auth();
+async function initializeFirebaseAuth() {
+    try {
+        const response = await fetch('/api/config');
+        const config = await response.json();
+        if (!firebase.apps.length) {
+            firebase.initializeApp(config);
+        }
+        auth = firebase.auth();
+        return auth;
+    } catch (error) {
+        console.error("Failed to load Firebase config:", error);
+    }
+}
 
 async function loginWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -122,8 +135,8 @@ async function solveMFA(resolver, verificationId, verificationCode) {
 }
 
 async function logout() {
-
     try {
+        if (!auth) await initializeFirebaseAuth();
         await auth.signOut();
         window.location.assign('/sessionLogout');
     } catch (error) {

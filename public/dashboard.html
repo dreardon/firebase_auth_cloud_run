@@ -87,7 +87,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-auth-compat.js"></script>
-    <script src="firebase-config.js"></script>
     <script src="auth.js"></script>
     <script>
         let enrollVerificationId = null;
@@ -141,8 +140,10 @@
                         img.classList.remove('hidden');
                     }
 
-                    // Check MFA status
-                    checkMFAStatus();
+                    // Check MFA status after ensuring auth is initialized
+                    initializeFirebaseAuth().then(() => {
+                        checkMFAStatus();
+                    });
                 } else {
                     window.location.assign('/login');
                 }
