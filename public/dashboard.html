@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CloudAuth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    
+    <nav class="navbar">
+        <a href="/" class="logo" style="text-decoration: none;">CloudAuth</a>
+        <div>
+            <button onclick="logout()" class="btn btn-outline">Sign Out</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="card animate-fade">
+            <img id="user-img" src="" alt="Profile" class="profile-img hidden">
+            <h2 id="user-greeting" style="font-size: 2rem; margin-bottom: 0.5rem;">Hello!</h2>
+            <p id="user-email" style="color: var(--text-muted); margin-bottom: 2rem;"></p>
+            
+            <div style="text-align: left; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 1rem; border: 1px solid var(--glass-border); margin-bottom: 2rem;">
+                <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Session Status</p>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                    <div style="width: 10px; height: 10px; background: #22c55e; border-radius: 50%;"></div>
+                    <p style="font-weight: 600;">Authenticated via Cloud Run</p>
+                </div>
+                <div id="verify-status" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem;">
+                    <!-- Dynamically filled -->
+                </div>
+            </div>
+
+            <!-- MFA Section -->
+            <div id="mfa-section" style="text-align: left; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 1rem; border: 1px solid var(--glass-border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <p style="font-size: 0.875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Multi-Factor Authentication</p>
+                    <span id="mfa-badge" class="hidden" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 0.25rem 0.5rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 700;">ACTIVE</span>
+                </div>
+                
+                <div id="mfa-status-info">
+                    <p id="mfa-text" style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1rem;">MFA adds an extra layer of security to your account.</p>
+                    <button id="enroll-mfa-btn" class="btn btn-outline" style="width: 100%; justify-content: center;">Enroll in Phone MFA</button>
+                    <button id="unenroll-mfa-btn" class="btn btn-outline hidden" style="width: 100%; justify-content: center; border-color: #ef4444; color: #ef4444;">Disable MFA</button>
+                </div>
+
+                <!-- MFA Enrollment Form (initially hidden) -->
+                <div id="mfa-enrollment-form" class="hidden">
+                    <div class="form-group">
+                        <label for="phone-number">Phone Number (E.164 format)</label>
+                        <input type="text" id="phone-number" class="form-control" placeholder="+15551234567">
+                    </div>
+                    <button id="send-code-btn" class="btn btn-primary" style="width: 100%; justify-content: center;">Send Code</button>
+                    
+                    <div id="mfa-verify-step" class="hidden" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+                        <div class="form-group">
+                            <label for="verification-code">Verification Code</label>
+                            <input type="text" id="verification-code" class="form-control" placeholder="123456">
+                        </div>
+                        <button id="confirm-mfa-btn" class="btn btn-primary" style="width: 100%; justify-content: center;">Confirm & Enable</button>
+                    </div>
+                    <button id="cancel-mfa-btn" class="btn btn-outline" style="width: 100%; justify-content: center; margin-top: 1rem;">Cancel</button>
+                </div>
+            </div>
+
+            <p style="margin-top: 2rem; color: var(--text-muted);">This page is protected by a server-side session cookie verified against Firebase Auth.</p>
+        </div>
+
+        <!-- Raw JSON Data Section -->
+        <div class="card animate-fade" style="margin-top: 2rem; max-width: 800px; text-align: left; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.25rem; font-weight: 700;">User Identity Data</h3>
+                <span style="font-size: 0.75rem; background: var(--primary); padding: 0.25rem 0.75rem; border-radius: 2rem; font-weight: 600; letter-spacing: 0.05em;">JSON RESPONSE</span>
+            </div>
+            <div class="code-container">
+                <pre id="user-json-raw"></pre>
+            </div>
+        </div>
+
+        <div id="recaptcha-container"></div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+    <script>
+        let enrollVerificationId = null;
+
+        function syntaxHighlight(json) {
+            if (typeof json != 'string') {
+                json = JSON.stringify(json, undefined, 2);
+            }
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
+                var cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        fetch('/api/user')
+            .then(res => res.json())
+            .then(data => {
+                if (data.user) {
+                    const isAnon = data.user.firebase.sign_in_provider === 'anonymous';
+                    document.getElementById('user-greeting').innerText = `Welcome, ${isAnon ? 'Guest' : (data.user.name || 'User')}!`;
+                    document.getElementById('user-email').innerText = isAnon ? 'Anonymous Session' : data.user.email;
+                    
+                    // Display Raw JSON with syntax highlighting
+                    document.getElementById('user-json-raw').innerHTML = syntaxHighlight(data.user);
+
+                    const verifyDiv = document.getElementById('verify-status');
+                    if (isAnon) {
+                        verifyDiv.innerHTML = '<div style="width: 10px; height: 10px; background: #eab308; border-radius: 50%;"></div><p style="font-size: 0.875rem;">Unverified Anonymous User</p>';
+                        document.getElementById('mfa-section').classList.add('hidden'); // No MFA for anon
+                    } else if (data.user.email_verified) {
+                        verifyDiv.innerHTML = '<div style="width: 10px; height: 10px; background: #22c55e; border-radius: 50%;"></div><p style="font-size: 0.875rem;">Email Verified</p>';
+                    } else {
+                        verifyDiv.innerHTML = '<div style="width: 10px; height: 10px; background: #ef4444; border-radius: 50%;"></div><p style="font-size: 0.875rem;">Email Not Verified</p>';
+                    }
+
+                    if (data.user.picture) {
+                        const img = document.getElementById('user-img');
+                        img.src = data.user.picture;
+                        img.classList.remove('hidden');
+                    }
+
+                    // Check MFA status
+                    checkMFAStatus();
+                } else {
+                    window.location.assign('/login');
+                }
+            })
+            .catch(() => {
+                window.location.assign('/login');
+            });
+
+        function checkMFAStatus() {
+            // We need to check via the client SDK user object as well for real-time enrollment status
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    const mfaEnrolledCount = user.multiFactor.enrolledFactors.length;
+                    const mfaBadge = document.getElementById('mfa-badge');
+                    const enrollBtn = document.getElementById('enroll-mfa-btn');
+                    const unenrollBtn = document.getElementById('unenroll-mfa-btn');
+                    const mfaText = document.getElementById('mfa-text');
+
+                    if (mfaEnrolledCount > 0) {
+                        const mfaInfo = user.multiFactor.enrolledFactors[0];
+                        mfaBadge.classList.remove('hidden');
+                        enrollBtn.classList.add('hidden');
+                        unenrollBtn.classList.remove('hidden');
+                        mfaText.innerText = `Protected by phone: ${mfaInfo.phoneNumber}`;
+                        
+                        unenrollBtn.onclick = async () => {
+                            if (confirm('Are you sure you want to disable MFA?')) {
+                                try {
+                                    await unenrollMFA(mfaInfo);
+                                    location.reload();
+                                } catch (e) { alert(e.message); }
+                            }
+                        };
+                    } else {
+                        mfaBadge.classList.add('hidden');
+                        enrollBtn.classList.remove('hidden');
+                        unenrollBtn.classList.add('hidden');
+                        mfaText.innerText = "MFA is currently disabled. Protect your account now.";
+                    }
+                }
+            });
+        }
+
+        const enrollBtn = document.getElementById('enroll-mfa-btn');
+        const mfaStatusInfo = document.getElementById('mfa-status-info');
+        const enrollmentForm = document.getElementById('mfa-enrollment-form');
+        const cancelBtn = document.getElementById('cancel-mfa-btn');
+        const sendCodeBtn = document.getElementById('send-code-btn');
+        const confirmMfaBtn = document.getElementById('confirm-mfa-btn');
+        const phoneInput = document.getElementById('phone-number');
+        const codeInput = document.getElementById('verification-code');
+        const verifyStep = document.getElementById('mfa-verify-step');
+
+        enrollBtn.onclick = () => {
+            mfaStatusInfo.classList.add('hidden');
+            enrollmentForm.classList.remove('hidden');
+        };
+
+        cancelBtn.onclick = () => {
+            mfaStatusInfo.classList.remove('hidden');
+            enrollmentForm.classList.add('hidden');
+            verifyStep.classList.add('hidden');
+        };
+
+        sendCodeBtn.onclick = async () => {
+            if (!window.recaptchaVerifier) {
+                window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                    'size': 'invisible'
+                }, firebase.app());
+            }
+
+            try {
+                sendCodeBtn.disabled = true;
+                sendCodeBtn.innerText = 'Sending...';
+                
+                // Explicitly render to warm up the verifier
+                await window.recaptchaVerifier.render();
+                
+                enrollVerificationId = await enrollPhoneMFA(phoneInput.value, window.recaptchaVerifier);
+                verifyStep.classList.remove('hidden');
+                sendCodeBtn.classList.add('hidden');
+            } catch (e) {
+                alert(e.message);
+                sendCodeBtn.disabled = false;
+                sendCodeBtn.innerText = 'Send Code';
+            }
+        };
+
+        confirmMfaBtn.onclick = async () => {
+            try {
+                confirmMfaBtn.disabled = true;
+                confirmMfaBtn.innerText = 'Confirming...';
+                await confirmMFAEnrollment(enrollVerificationId, codeInput.value);
+                location.reload();
+            } catch (e) {
+                alert(e.message);
+                confirmMfaBtn.disabled = false;
+                confirmMfaBtn.innerText = 'Confirm & Enable';
+            }
+        };
+
+        function logout() {
+            window.location.assign('/sessionLogout');
+        }
+    </script>
+</body>
+</html>

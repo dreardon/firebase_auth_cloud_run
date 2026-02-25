@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Auth Cloud Run Demo</title>
+    <meta name="description" content="A demonstration of Firebase Auth integration in a Cloud Run hosted Express application.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    
+    <nav class="navbar">
+        <div class="logo">CloudAuth</div>
+        <div id="nav-actions">
+             <a href="/login" class="btn btn-primary" id="login-btn">Sign In</a>
+             <a href="/dashboard" class="btn btn-outline hidden" id="dashboard-btn">Dashboard</a>
+             <button onclick="logout()" class="btn btn-outline hidden" id="logout-btn">Sign Out</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="animate-fade">
+            <h1>Firebase Auth</h1>
+            <p class="subtitle">Cloud Run Demo</p>
+            <div class="cta-group">
+                <a href="/login" class="btn btn-primary btn-lg">Login</a>
+                <button onclick="signInAnon()" id="anon-btn" class="btn btn-outline btn-lg">Browse Anonymously</button>
+            </div>
+            <div id="loading" class="hidden" style="margin-top: 2rem;">
+                <span class="loader"></span>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+    <script>
+        // Check if user is logged in via API
+        fetch('/api/user')
+            .then(res => res.json())
+            .then(data => {
+                if (data.user) {
+                    document.getElementById('login-btn').classList.add('hidden');
+                    document.getElementById('anon-btn').classList.add('hidden');
+                    document.getElementById('dashboard-btn').classList.remove('hidden');
+                    document.getElementById('logout-btn').classList.remove('hidden');
+                }
+            });
+
+        async function signInAnon() {
+            document.getElementById('anon-btn').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+
+            try {
+                const result = await loginAnonymously();
+                const idToken = await result.user.getIdToken();
+                
+                const response = await fetch('/sessionLogin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken })
+                });
+
+                if (response.ok) {
+                    window.location.assign('/dashboard');
+                } else {
+                    throw new Error('Failed to create session');
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Failed to sign in anonymously. Ensure 'Anonymous' is enabled in Firebase Console.");
+                document.getElementById('anon-btn').classList.remove('hidden');
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

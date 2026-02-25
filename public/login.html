@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - CloudAuth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    
+    <nav class="navbar">
+        <a href="/" class="logo" style="text-decoration: none;">CloudAuth</a>
+    </nav>
+
+    <main class="container">
+        <!-- Main Auth Card -->
+        <div id="auth-card" class="card animate-fade">
+            <h2 id="form-title" style="font-size: 2rem; margin-bottom: 0.5rem;">Sign In</h2>
+            <p id="form-subtitle" style="color: var(--text-muted); margin-bottom: 2rem;">Choose your preferred authentication method.</p>
+            
+            <!-- Social Sign In -->
+            <button id="google-signin" class="btn btn-outline" style="width: 100%; justify-content: center; padding: 1rem; border-color: var(--border);">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 20px;">
+                Sign in with Google
+            </button>
+
+            <div class="divider">or use passwordless link</div>
+
+            <!-- Passwordless Email Form -->
+            <form id="auth-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="form-control" placeholder="name@company.com" required>
+                </div>
+                <button type="submit" id="submit-btn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1rem;">
+                    Send Sign-In Link
+                </button>
+            </form>
+
+            <div id="success-msg" class="hidden" style="margin-top: 2rem; color: #22c55e;">
+                <p>Check your email! A sign-in link has been sent to your inbox.</p>
+            </div>
+
+            <div id="loading" class="hidden" style="margin-top: 2rem;">
+                <span class="loader"></span>
+                <p id="loading-text" style="margin-top: 1rem; color: var(--text-muted);">Processing...</p>
+            </div>
+
+            <div id="error" class="hidden" style="margin-top: 2rem; color: #ef4444;">
+                <p id="error-message"></p>
+            </div>
+        </div>
+
+        <!-- MFA Card (Hidden by default) -->
+        <div id="mfa-card" class="card animate-fade hidden">
+            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">Two-Factor Auth</h2>
+            <p id="mfa-subtitle" style="color: var(--text-muted); margin-bottom: 2rem;">Enter the verification code sent to your phone.</p>
+            
+            <form id="mfa-form">
+                <div class="form-group">
+                    <label for="mfa-code">Verification Code</label>
+                    <input type="text" id="mfa-code" class="form-control" placeholder="123456" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1rem;">
+                    Verify & Sign In
+                </button>
+                <button type="button" onclick="location.reload()" class="btn btn-outline" style="width: 100%; justify-content: center; margin-top: 1rem; padding: 1rem;">
+                    Back to Sign In
+                </button>
+            </form>
+        </div>
+
+        <!-- Recaptcha for MFA -->
+        <div id="recaptcha-container"></div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.9.0/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+    <script>
+        const googleBtn = document.getElementById('google-signin');
+        const authForm = document.getElementById('auth-form');
+        const emailInput = document.getElementById('email');
+        const submitBtn = document.getElementById('submit-btn');
+        const successMsg = document.getElementById('success-msg');
+        
+        const authCard = document.getElementById('auth-card');
+        const mfaCard = document.getElementById('mfa-card');
+        const mfaForm = document.getElementById('mfa-form');
+        const mfaCodeInput = document.getElementById('mfa-code');
+        const mfaSubtitle = document.getElementById('mfa-subtitle');
+
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loading-text');
+        const errorDiv = document.getElementById('error');
+        const errorMessage = document.getElementById('error-message');
+
+        let mfaResolver = null;
+        let mfaVerificationId = null;
+
+        // Check if returning from email link
+        window.addEventListener('load', async () => {
+            if (auth.isSignInWithEmailLink(window.location.href)) {
+                showLoading(true, 'Verifying link...');
+                try {
+                    const result = await finishSignInWithEmailLink();
+                    if (result) {
+                        await handleSessionLogin(result.user);
+                    }
+                } catch (err) {
+                    handleAuthError(err);
+                }
+            }
+        });
+
+        async function handleSessionLogin(user) {
+            const idToken = await user.getIdToken();
+            const response = await fetch('/sessionLogin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken })
+            });
+
+            if (response.ok) {
+                window.location.assign('/dashboard');
+            } else {
+                throw new Error('Failed to create secure session');
+            }
+        }
+
+        async function handleAuthError(err) {
+            console.error(err);
+            if (err.code === 'auth/multi-factor-auth-required') {
+                mfaResolver = err.resolver;
+                const mfaHint = mfaResolver.hints[0];
+                
+                showLoading(true, 'Sending MFA code...');
+                
+                if (!window.recaptchaVerifier) {
+                    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                        'size': 'invisible'
+                    }, firebase.app());
+                }
+                
+                await window.recaptchaVerifier.render();
+
+                const phoneInfoOptions = {
+                    multiFactorHint: mfaHint,
+                    session: mfaResolver.session
+                };
+                const phoneAuthProvider = new firebase.auth.PhoneAuthProvider();
+                mfaVerificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, window.recaptchaVerifier);
+                
+                showLoading(false);
+                authCard.classList.add('hidden');
+                mfaCard.classList.remove('hidden');
+                mfaSubtitle.innerText = `Enter the verification code sent to the phone ending in ${mfaHint.phoneNumber.slice(-4)}`;
+            } else {
+                showError(err.message);
+            }
+        }
+
+        googleBtn.addEventListener('click', async () => {
+            showLoading(true, 'Connecting to Google...');
+            try {
+                const result = await loginWithGoogle();
+                await handleSessionLogin(result.user);
+            } catch (err) {
+                handleAuthError(err);
+            }
+        });
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showLoading(true, 'Sending link...');
+            try {
+                await sendSignInLink(emailInput.value);
+                showLoading(false);
+                authForm.classList.add('hidden');
+                googleBtn.classList.add('hidden');
+                document.querySelector('.divider').classList.add('hidden');
+                successMsg.classList.remove('hidden');
+            } catch (err) {
+                handleAuthError(err);
+            }
+        });
+
+        mfaForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showLoading(true, 'Verifying code...');
+            try {
+                const result = await solveMFA(mfaResolver, mfaVerificationId, mfaCodeInput.value);
+                await handleSessionLogin(result.user);
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        function showLoading(show, text = 'Processing...') {
+            loadingText.innerText = text;
+            if (show) {
+                loading.classList.remove('hidden');
+                errorDiv.classList.add('hidden');
+                successMsg.classList.add('hidden');
+            } else {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function showError(msg) {
+            showLoading(false);
+            errorDiv.classList.remove('hidden');
+            errorMessage.innerText = msg || 'An error occurred. Please try again.';
+        }
+    </script>
+</body>
+</html>
