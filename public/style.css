@@ -6,6 +6,9 @@
     --text: #f8fafc;
     --text-muted: #94a3b8;
     --border: #334155;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --warning: #f59e0b;
     --glass: rgba(30, 41, 59, 0.7);
     --glass-border: rgba(255, 255, 255, 0.1);
 }

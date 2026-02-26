@@ -71,14 +71,117 @@
             <p style="margin-top: 2rem; color: var(--text-muted);">This page is protected by a server-side session cookie verified against Firebase Auth.</p>
         </div>
 
-        <!-- Raw JSON Data Section -->
-        <div class="card animate-fade" style="margin-top: 2rem; max-width: 800px; text-align: left; padding: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.25rem; font-weight: 700;">User Identity Data</h3>
-                <span style="font-size: 0.75rem; background: var(--primary); padding: 0.25rem 0.75rem; border-radius: 2rem; font-weight: 600; letter-spacing: 0.05em;">JSON RESPONSE</span>
+        <!-- Session Monitor Section -->
+        <div class="card animate-fade" style="margin-top: 2rem; max-width: 900px; text-align: left; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3 style="font-size: 1.25rem; font-weight: 700;">Auth & Session Monitor</h3>
+                <span id="session-status-badge" style="font-size: 0.75rem; background: var(--success); padding: 0.25rem 0.75rem; border-radius: 2rem; font-weight: 600; letter-spacing: 0.05em;">ACTIVE</span>
             </div>
-            <div class="code-container">
-                <pre id="user-json-raw"></pre>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Server Side (Cookie) -->
+                <div style="background: rgba(255,255,255,0.02); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid var(--border);">
+                    <div style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                        <h4 style="font-size: 0.875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">Server Session (Cookie)</h4>
+                    </div>
+                    
+                    <div style="min-height: 80px; margin-bottom: 1rem;">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">Expires In (Fixed)</p>
+                        <p id="server-expires-in" style="font-size: 1.5rem; font-weight: 700; color: var(--primary); font-family: monospace;">--:--:--</p>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        <span>Session Validity</span>
+                        <span id="server-progress-text">100%</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 1rem;">
+                        <div id="server-progress-bar" style="background: var(--primary); height: 100%; width: 100%; transition: width 1s linear;"></div>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Create Time: <span id="server-created-at" style="color: var(--text);">--</span></p>
+
+                    <div style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 0.5rem; font-size: 0.75rem; line-height: 1.4; color: var(--text-muted);">
+                        <strong style="color: var(--primary);">What is this?</strong><br>
+                        This is a secure <strong>HTTP-Only Cookie</strong> minted by the server. It acts as your "Ticket" to access backend APIs.
+                        <ul style="margin: 0.5rem 0 0 1rem; padding: 0;">
+                            <li>Cannot be accessed by JavaScript (XSS safe)</li>
+                            <li><strong>Fixed Duration:</strong> Does not auto-refresh. When this expires, you are logged out of the server.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Client Side (Token) -->
+                <div style="background: rgba(255,255,255,0.02); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                         <h4 style="font-size: 0.875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">Client Auth (ID Token)</h4>
+                         <button id="refresh-token-btn" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.65rem; text-transform: uppercase;">Force Refresh</button>
+                    </div>
+                   
+                    <div style="min-height: 80px; margin-bottom: 1rem;">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">Token Expires In (Auto-renews)</p>
+                        <p id="client-expires-in" style="font-size: 1.5rem; font-weight: 700; color: var(--warning); font-family: monospace;">--:--:--</p>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        <span>Token Life</span>
+                        <span id="client-progress-text">100%</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 1rem;">
+                        <div id="client-progress-bar" style="background: var(--warning); height: 100%; width: 100%; transition: width 1s linear;"></div>
+                    </div>
+                     <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Issued At: <span id="client-issued-at" style="color: var(--text);">--</span></p>
+
+                     <div style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 0.5rem; font-size: 0.75rem; line-height: 1.4; color: var(--text-muted);">
+                        <strong style="color: var(--warning);">What is this?</strong><br>
+                        This is the <strong>Firebase ID Token</strong> stored in your browser. It proves who you are to Firebase.
+                        <ul style="margin: 0.5rem 0 0 1rem; padding: 0;">
+                            <li>Used for direct Firebase access (Firestore, etc.)</li>
+                            <li><strong>Auto-Refreshes:</strong> The SDK automatically renews this token using a Refresh Token.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raw JSON Data Section -->
+        <!-- Data Comparison Section -->
+        <div class="card animate-fade" style="margin-top: 2rem; max-width: 1200px; text-align: left; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3 style="font-size: 1.25rem; font-weight: 700;">Identity Data Source Comparison</h3>
+                <span style="font-size: 0.75rem; background: var(--primary); padding: 0.25rem 0.75rem; border-radius: 2rem; font-weight: 600; letter-spacing: 0.05em;">LIVE API DATA</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                
+                <!-- Server Data Column -->
+                <div>
+                     <div style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="font-size: 0.875rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">
+                            <span style="display: inline-block; width: 0.6em; height: 0.6em; background: var(--primary); border-radius: 50%; margin-right: 0.5rem;"></span>
+                            Server Session
+                        </h4>
+                        <span style="font-size: 0.7rem; color: var(--text-muted);">Source: /api/user (Cookie)</span>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Fetched At: <span id="server-data-time" style="color: var(--text);">Thinking...</span></p>
+                    <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-family: monospace; font-size: 0.8rem; height: 400px; overflow-y: auto; border: 1px solid var(--border);">
+                        <pre id="user-json-raw" style="margin: 0; white-space: pre-wrap; word-break: break-all;">Loading server data...</pre>
+                    </div>
+                </div>
+
+                <!-- Client Data Column -->
+                <div>
+                     <div style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="font-size: 0.875rem; color: var(--warning); text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">
+                            <span style="display: inline-block; width: 0.6em; height: 0.6em; background: var(--warning); border-radius: 50%; margin-right: 0.5rem;"></span>
+                            Client Token
+                        </h4>
+                        <span style="font-size: 0.7rem; color: var(--text-muted);">Source: firebase.auth() (ID Token)</span>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Fetched At: <span id="client-data-time" style="color: var(--text);">Waiting for Auth...</span></p>
+                    <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-family: monospace; font-size: 0.8rem; height: 400px; overflow-y: auto; border: 1px solid var(--border);">
+                        <pre id="client-json-raw" style="margin: 0; white-space: pre-wrap; word-break: break-all;">Waiting for client SDK...</pre>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -113,6 +216,99 @@
             });
         }
 
+        function startSessionMonitor(serverClaims) {
+            console.log(`%c[Auth][Server] Initialized | Expires: ${serverClaims.expiresAt}`, "color: #4ade80; font-weight: bold;");
+
+            // --- Server Session Elements ---
+            const serverCreatedEl = document.getElementById('server-created-at');
+            const serverExpiresEl = document.getElementById('server-expires-in');
+            const serverProgressEl = document.getElementById('server-progress-bar');
+            const serverProgressText = document.getElementById('server-progress-text');
+            const statusBadge = document.getElementById('session-status-badge');
+
+            // --- Client Token Elements ---
+            const clientIssuedEl = document.getElementById('client-issued-at');
+            const clientExpiresEl = document.getElementById('client-expires-in');
+            const clientProgressEl = document.getElementById('client-progress-bar');
+            
+            // Server Timestamps
+            const serverCreatedTime = new Date(serverClaims.issuedAt);
+            const serverExpiresTime = new Date(serverClaims.expiresAt);
+            serverCreatedEl.innerText = serverCreatedTime.toLocaleTimeString();
+
+            // Setup Refresh Button
+            document.getElementById('refresh-token-btn').addEventListener('click', async () => {
+                 console.log(`%c[Auth][Client] Forcing token refresh...`, "color: #f59e0b;");
+                 const user = firebase.auth().currentUser;
+                 if (user) {
+                     await user.getIdToken(true);
+                     console.log(`%c[Auth][Client] Token refreshed manually`, "color: #22c55e;");
+                 }
+            });
+
+            function updateTimers() {
+                const now = new Date();
+                
+                // 1. Update Server Session (Cookie)
+                const serverTimeLeft = serverExpiresTime - now;
+                const serverTotalDuration = serverExpiresTime - serverCreatedTime;
+                
+
+                if (serverTimeLeft <= 0) {
+                     serverExpiresEl.innerText = "EXPIRED";
+                     serverExpiresEl.style.color = "var(--danger)";
+                     statusBadge.innerText = "EXPIRED";
+                     statusBadge.style.background = "var(--danger)";
+                     serverProgressEl.style.width = "0%";
+                     clearInterval(window.sessionInterval);
+                } else {
+                    serverExpiresEl.innerText = formatTimeLeft(serverTimeLeft);
+                    const p = ((serverTotalDuration - serverTimeLeft) / serverTotalDuration) * 100;
+                    const remaining = 100 - p;
+                    serverProgressEl.style.width = `${remaining}%`;
+                    serverProgressText.innerText = `${Math.floor(remaining)}%`;
+                    
+                    if (remaining < 20) serverProgressEl.style.background = "var(--danger)";
+                    else if (remaining < 50) serverProgressEl.style.background = "var(--warning)";
+                }
+
+                // 2. Update Client Token (ID Token)
+                // We need to fetch the current ID token details (cached)
+                const user = firebase.auth().currentUser;
+                if (user) {
+                    user.getIdTokenResult().then((idTokenResult) => {
+                         const issuedTime = new Date(idTokenResult.issuedAtTime);
+                         const expiresTime = new Date(idTokenResult.expirationTime);
+                         const timeLeft = expiresTime - now;
+                         const totalDuration = expiresTime - issuedTime;
+
+                         clientIssuedEl.innerText = issuedTime.toLocaleTimeString();
+                         
+                         if (timeLeft <= 0) {
+                              // It should have auto-refreshed by now, but just in case
+                              clientExpiresEl.innerText = "REFRESHING...";
+                         } else {
+                              clientExpiresEl.innerText = formatTimeLeft(timeLeft);
+                              const p = ((totalDuration - timeLeft) / totalDuration) * 100;
+                              const remaining = 100 - p;
+                              clientProgressEl.style.width = `${remaining}%`;
+                         }
+                    }).catch(e => console.error("Error checking client token:", e));
+                }
+            }
+
+            function formatTimeLeft(ms) {
+                if (ms < 0) return "00:00:00";
+                const h = Math.floor(ms / (1000 * 60 * 60));
+                const m = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((ms % (1000 * 60)) / 1000);
+                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            }
+
+            updateTimers();
+            window.sessionInterval = setInterval(updateTimers, 1000);
+        }
+
         fetch('/api/user')
             .then(res => res.json())
             .then(data => {
@@ -121,9 +317,11 @@
                     document.getElementById('user-greeting').innerText = `Welcome, ${isAnon ? 'Guest' : (data.user.name || 'User')}!`;
                     document.getElementById('user-email').innerText = isAnon ? 'Anonymous Session' : data.user.email;
                     
-                    // Display Raw JSON with syntax highlighting
+                    // Display Raw JSON (Server Data)
+                    const serverFetchTime = new Date().toLocaleTimeString();
+                    document.getElementById('server-data-time').innerText = serverFetchTime;
                     document.getElementById('user-json-raw').innerHTML = syntaxHighlight(data.user);
-
+                    
                     const verifyDiv = document.getElementById('verify-status');
                     if (isAnon) {
                         verifyDiv.innerHTML = '<div style="width: 10px; height: 10px; background: #eab308; border-radius: 50%;"></div><p style="font-size: 0.875rem;">Unverified Anonymous User</p>';
@@ -140,16 +338,38 @@
                         img.classList.remove('hidden');
                     }
 
-                    // Check MFA status after ensuring auth is initialized
+                    // Initialize Auth first, then start monitors
                     initializeFirebaseAuth().then(() => {
+                        // 1. Start Session Monitor
+                        if (data.user.sessionClaims) {
+                            startSessionMonitor(data.user.sessionClaims);
+                        } else {
+                            console.warn("[Session] No extended session claims found.");
+                        }
+
+                        // 2. Fetch & Display Client Token Data (Comparison)
+                        firebase.auth().onIdTokenChanged(user => {
+                            if (user) {
+                                user.getIdTokenResult().then((idTokenResult) => {
+                                    const clientFetchTime = new Date().toLocaleTimeString();
+                                    document.getElementById('client-data-time').innerText = clientFetchTime;
+                                    document.getElementById('client-json-raw').innerHTML = syntaxHighlight(idTokenResult.claims);
+                                });
+                            }
+                        });
+
+                        // 3. Check MFA status
                         checkMFAStatus();
                     });
                 } else {
                     window.location.assign('/login');
                 }
             })
-            .catch(() => {
-                window.location.assign('/login');
+            .catch((e) => {
+                console.error("Dashboard Error:", e);
+                // alert("Dashboard Error: " + e.message); // Uncomment for debugging
+                // Only redirect if it's strictly an auth error, otherwise show UI
+                // window.location.assign('/login'); 
             });
 
         function checkMFAStatus() {

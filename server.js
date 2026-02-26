@@ -54,13 +54,11 @@ app.get('/api/config', (req, res) => {
 
 app.post('/sessionLogin', async (req, res) => {
     const idToken = req.body.idToken;
-    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
+    const expiresIn = 60 * 5 * 1000; // 5 minutes (TESTING)
 
     try {
         const decodedToken = await admin.auth().verifyIdToken(idToken);
-        
-        // Ensure email is verified if it exists (Google, Email Link)
-        // Anonymous users won't have an email field usually
+
         if (decodedToken.email && !decodedToken.email_verified) {
             return res.status(401).send('EMAIL_NOT_VERIFIED');
         }
@@ -84,7 +82,16 @@ app.get('/api/user', async (req, res) => {
     const sessionCookie = req.cookies.session || '';
     try {
         const decodedClaims = await admin.auth().verifySessionCookie(sessionCookie, true);
-        res.json({ user: decodedClaims });
+        res.json({ 
+            user: {
+                ...decodedClaims,
+                sessionClaims: {
+                    authTime: new Date(decodedClaims.auth_time * 1000).toISOString(),
+                    issuedAt: new Date(decodedClaims.iat * 1000).toISOString(),
+                    expiresAt: new Date(decodedClaims.exp * 1000).toISOString(),
+                }
+            }
+        });
     } catch (error) {
         res.status(401).json({ user: null });
     }
