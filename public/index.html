@@ -7,14 +7,18 @@
     <meta name="description" content="A demonstration of Firebase Auth integration in a Cloud Run hosted Express application.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .logo, .btn, .navbar { font-family: 'Outfit', sans-serif; }
+    </style>
 </head>
 <body>
     <div class="gradient-bg"></div>
     
     <nav class="navbar">
-        <div class="logo">CloudAuth</div>
+        <div class="logo">Firebase Auth</div>
         <div id="nav-actions">
              <a href="/login" class="btn btn-primary" id="login-btn">Sign In</a>
              <a href="/dashboard" class="btn btn-outline hidden" id="dashboard-btn">Dashboard</a>
@@ -22,16 +26,57 @@
         </div>
     </nav>
 
-    <main class="container">
+    <main class="container" style="text-align: center; padding-top: 4rem;">
         <div class="animate-fade">
-            <h1>Firebase Auth</h1>
-            <p class="subtitle">Cloud Run Demo</p>
-            <div class="cta-group">
-                <a href="/login" class="btn btn-primary btn-lg">Login</a>
-                <button onclick="signInAnon()" id="anon-btn" class="btn btn-outline btn-lg">Browse Anonymously</button>
+            <span class="badge" style="background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 2rem; font-size: 0.875rem; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 1.5rem; display: inline-block;">
+                Google Cloud Run and Firebase
+            </span>
+            <h1 style="font-size: 4rem; line-height: 1.1; margin-bottom: 1.5rem; background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                Secure Authentication<br>
+            </h1>
+            <p class="subtitle" style="max-width: 600px; margin: 0 auto 3rem auto; font-size: 1.25rem; line-height: 1.6; color: var(--text-muted);">
+                A demonstration of <strong>Server-Side Session Cookies</strong> and <strong>Client-Side Token</strong> management, running on Google Cloud Run.
+            </p>
+            
+            <div class="cta-group" style="margin-bottom: 4rem;">
+                <a href="/login" class="btn btn-primary btn-lg" style="padding: 1rem 2.5rem; font-size: 1.125rem;">Sign In</a>
+                <button onclick="signInAnon()" id="anon-btn" class="btn btn-outline btn-lg" style="padding: 1rem 2.5rem; font-size: 1.125rem;">Sign In Anonymously</button>
             </div>
+            
             <div id="loading" class="hidden" style="margin-top: 2rem;">
                 <span class="loader"></span>
+            </div>
+
+            <!-- Feature Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; max-width: 1200px; margin: 0 auto; text-align: left;">
+                
+                <!-- Card 1 -->
+                <div class="card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: transform 0.2s;">
+                    <div style="width: 48px; height: 48px; background: rgba(99, 102, 241, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; color: #818cf8;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem;">Session Cookies</h3>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5;">Secure, HTTP-only cookie management server-side prevents XSS attacks while maintaining seamless session persistence.</p>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: transform 0.2s;">
+                    <div style="width: 48px; height: 48px; background: rgba(34, 197, 94, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; color: #4ade80;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </div>
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem;">Identity Federation</h3>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5;">Support for Google, Microsoft, and Passwordless Email Links using standard OAuth 2.0 flows and account linking.</p>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: transform 0.2s;">
+                    <div style="width: 48px; height: 48px; background: rgba(244, 63, 94, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; color: #fb7185;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+                    </div>
+                    <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem;">MFA Protection</h3>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5;">Step-up security with SMS Multi-Factor Authentication for sensitive operations or high-privilege accounts.</p>
+                </div>
+
             </div>
         </div>
     </main>
