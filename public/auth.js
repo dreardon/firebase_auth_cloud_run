@@ -26,6 +26,17 @@ async function loginWithGoogle() {
     }
 }
 
+async function loginWithMicrosoft() {
+    const provider = new firebase.auth.OAuthProvider('microsoft.com');
+    try {
+        const result = await auth.signInWithPopup(provider);
+        return result;
+    } catch (error) {
+        console.error("Authentication Error:", error);
+        throw error;
+    }
+}
+
 async function loginAnonymously() {
     try {
         const result = await auth.signInAnonymously();

@@ -24,8 +24,14 @@
             
             <!-- Social Sign In -->
             <button id="google-signin" class="btn btn-outline" style="width: 100%; justify-content: center; padding: 1rem; border-color: var(--border);">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 20px;">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 20px; margin-right: 0.5rem;">
                 Sign in with Google
+            </button>
+
+            <!-- Microsoft Sign In -->
+            <button id="microsoft-signin" class="btn btn-outline" style="width: 100%; justify-content: center; padding: 1rem; border-color: var(--border); margin-top: 1rem;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" alt="Microsoft Logo" style="width: 20px; margin-right: 0.5rem;">
+                Sign in with Microsoft
             </button>
 
             <div class="divider">or use passwordless link</div>
@@ -83,6 +89,7 @@
     <script src="auth.js"></script>
     <script>
         const googleBtn = document.getElementById('google-signin');
+        const microsoftBtn = document.getElementById('microsoft-signin');
         const authForm = document.getElementById('auth-form');
         const emailInput = document.getElementById('email');
         const submitBtn = document.getElementById('submit-btn');
@@ -175,6 +182,19 @@
                 authCard.classList.add('hidden');
                 mfaCard.classList.remove('hidden');
                 mfaSubtitle.innerText = `Enter the verification code sent to the phone ending in ${mfaHint.phoneNumber.slice(-4)}`;
+            } else if (err.code === 'auth/account-exists-with-different-credential') {
+                // ACCOUNT LINKING FLOW (Manual)
+                window.pendingCredential = err.credential;
+                const email = err.email;
+
+                showError(`An account with email ${email} already exists. Please sign in with your existing provider (e.g. Google) to link this Microsoft account.`);
+
+                googleBtn.innerText = "Link with Google";
+                googleBtn.classList.add('btn-primary');
+                googleBtn.classList.remove('btn-outline');
+                // Hack: We'll set a flag so the next google login attempts to LINK.
+                window.isLinkingFlow = true;
+
             } else {
                 showError(err.message);
             }
@@ -182,9 +202,42 @@
 
         googleBtn.addEventListener('click', async () => {
             if (!auth) await initializeFirebaseAuth();
-            showLoading(true, 'Connecting to Google...');
+            
+            if (window.isLinkingFlow && window.pendingCredential) {
+                // LINKING FLOW
+                showLoading(true, 'Linking accounts...');
+                try {
+                     const provider = new firebase.auth.GoogleAuthProvider();
+                     const result = await auth.signInWithPopup(provider);
+                     // User is signed in with Google. Now link Microsoft.
+                     await result.user.linkWithCredential(window.pendingCredential);
+                     
+                     // Cleanup
+                     window.pendingCredential = null;
+                     window.isLinkingFlow = false;
+                     
+                     await handleSessionLogin(result.user);
+                } catch (linkErr) {
+                    handleAuthError(linkErr);
+                }
+            } else {
+                // NORMAL LOGIN FLOW
+                showLoading(true, 'Connecting to Google...');
+                try {
+                    const result = await loginWithGoogle();
+                    await handleSessionLogin(result.user);
+                } catch (err) {
+                    handleAuthError(err);
+                }
+            }
+        });
+
+        // Microsoft Login Event
+        microsoftBtn.addEventListener('click', async () => {
+            if (!auth) await initializeFirebaseAuth();
+            showLoading(true, 'Connecting to Microsoft...');
             try {
-                const result = await loginWithGoogle();
+                const result = await loginWithMicrosoft();
                 await handleSessionLogin(result.user);
             } catch (err) {
                 handleAuthError(err);
